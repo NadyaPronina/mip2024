@@ -20,13 +20,13 @@ def symplectic_euler(func, x0, t):
         x[i] = [q_next, p_next]
     return x
 
-def symplectic_euler_param(func, x0, t, a, r, m, tau):
+def symplectic_euler_param(func, x0, t, a, b, c, tau = 0.1):
     x = np.zeros((len(t), len(x0)))
     x[0] = x0
     for i in range(1, len(t)):
         h = t[i] - t[i - 1]
         q_prev, p_prev = x[i - 1]
-        p_next = p_prev + h * func([q_prev, p_prev], 0, a, r, m, tau)[1]
+        p_next = p_prev + h * func([q_prev, p_prev], 0, a, b, c, tau)[1]
         q_next = q_prev + h * p_next
         x[i] = [q_next, p_next]
     return x
@@ -82,9 +82,9 @@ def rp_lin(x, t):
             g/L * (x[0] - np.pi) -  (r * x[1])/(m * L**2) + tau / (m * L**2)]  
 
 
-def rp_param(x, t, a, r, m, tau):
+def rp_param(x, t, a, b, c, tau):
     return [x[1], 
-            -a*np.sin(x[0]) -  (r * x[1])/(m * L**2) + tau / (m * L**2)]
+            -a*np.sin(x[0]) -  b * x[1] + c * tau]
 
 theta = odeint(rp, [q0, 0], logTime)
 logTheor = theta[:,0]
@@ -101,21 +101,25 @@ print(l2, linf)
 thetaLin = symplectic_euler(rp_lin, [q0, 0], logTime)
 logLin = thetaLin[:, 0]
 
-def l2_cost(params):
-    a, r, m, tau = params
-    xx = symplectic_euler_param(rp_param, [q0, 0], logTime, a, r, m, tau)
-    return cost(logPos-xx[:,0])[0]
+def l2_cost(params, tau=0.1):
+    a, b, c, tau = params
+    xx = symplectic_euler_param(rp_param, [q0, 0], logTime, a, b, c, tau)
+    return cost(logPos - xx[:, 0])[0]
 
-a0 = [0.9*g/L]
-r0 = 0.5
-m0 = 2
-tau0 = 0.1
-my_params = np.array([a0[0], r0, m0, tau0])
+a0 = [0.9 * g / L]
+b0 = 0.1
+c0 = 0.1
+tau = 0.1
+my_params = np.array([a0[0], b0, c0, tau])
 print(f'init a: {a0}')
 res = minimize(l2_cost, my_params)
 print(f'l2_res: {res.fun}')
-print(f'a: {res.x}')
+print(f'a: {res.x[0]}')
+print(f'b: {res.x[1]}')
+print(f'c: {res.x[2]}')
 print(f'a_th: {g/L}')
+print(f'b_th: {0.5/L**2}')
+print(f'c_th: {0.1/L**2}')
 # a = res.x[0]
 
 import matplotlib.pyplot as plt
